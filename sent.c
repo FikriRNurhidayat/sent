@@ -18,6 +18,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xft/Xft.h>
+#include <X11/Xresource.h>
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
@@ -557,6 +558,26 @@ run(void)
 }
 
 void
+xloadresources(void) {
+	XrmInitialize();
+
+	char* xrm;
+  
+	if ((xrm = XResourceManagerString(xw.dpy))) {
+		char *type;
+		XrmDatabase xdb = XrmGetStringDatabase(xrm);
+		XrmValue xval;
+
+		if (XrmGetResource(xdb, "sent.foreground", "*", &type, &xval))
+			colors[0] = strdup(xval.addr);
+		if (XrmGetResource(xdb, "sent.background", "*", &type, &xval))
+			colors[1] = strdup(xval.addr);
+
+		XrmDestroyDatabase(xdb);
+	}
+}
+
+void
 xdraw(void)
 {
 	unsigned int height, width, i;
@@ -615,7 +636,10 @@ xinit(void)
 	unsigned int i;
 
 	if (!(xw.dpy = XOpenDisplay(NULL)))
-		die("sent: Unable to open display");
+    die("sent: Unable to open display");
+
+	xloadresources();
+  
 	xw.scr = XDefaultScreen(xw.dpy);
 	xw.vis = XDefaultVisual(xw.dpy, xw.scr);
 	resize(DisplayWidth(xw.dpy, xw.scr), DisplayHeight(xw.dpy, xw.scr));
@@ -745,8 +769,9 @@ main(int argc, char *argv[])
 		die("sent: Unable to open '%s' for reading:", fname);
 	load(fp);
 	fclose(fp);
-
+  
 	xinit();
+  
 	run();
 
 	cleanup(0);
